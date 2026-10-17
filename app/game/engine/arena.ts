@@ -19,8 +19,9 @@ import type {
   WeaponId,
 } from "../types";
 import { PLAYER_RADIUS } from "./draw";
+import { findPath, followPath, lineClear, steerAround } from "./nav";
 
-const BASE_SPEED = 210;
+const BASE_SPEED = 315;
 const RESPAWN = 2.2;
 const WEAPON_RESPAWN = 16;
 const ROUND_TIME = 5 * 60;
@@ -101,6 +102,9 @@ export class Arena {
       targetId: null,
       aiTimer: 0.4 + Math.random() * 0.8,
       aiStrafe: Math.random() < 0.5 ? 1 : -1,
+      aiLunge: 0,
+      aiPath: [],
+      aiPathAge: 0,
     };
   }
 
@@ -189,52 +193,97 @@ export class Arena {
     let my = 0;
 
     if (grabWeapon && nearbyGun) {
-      const ang = Math.atan2(nearbyGun.y - player.y, nearbyGun.x - player.x);
-      mx = Math.cos(ang);
-      my = Math.sin(ang);
-      player.angle = ang;
+      const step = this.botStepToward(player, nearbyGun.x, nearbyGun.y, dt);
+      mx = step.x;
+      my = step.y;
+      player.angle = Math.atan2(nearbyGun.y - player.y, nearbyGun.x - player.x);
     } else if (nearest) {
       player.targetId = nearest.id;
       const toEnemy = Math.atan2(nearest.y - player.y, nearest.x - player.x);
       player.angle = toEnemy;
       const gap = dist(player, nearest);
-      const hitRange = def.ranged ? 260 : def.meleeReach + PLAYER_RADIUS * 0.35;
-      const holdMin = def.ranged ? 170 : hitRange * 0.72;
-      const holdMax = def.ranged ? 340 : hitRange * 0.98;
-      const overlap = PLAYER_RADIUS * 2 + 10;
+      const strikeRange = def.meleeReach + PLAYER_RADIUS;
+      const holdMin = def.ranged ? 170 : strikeRange * 0.55;
+      const holdMax = def.ranged ? 340 : strikeRange * 0.78;
+      const overlap = PLAYER_RADIUS * 2 + 6;
+      const canSee = lineClear(player.x, player.y, nearest.x, nearest.y, PLAYER_RADIUS + 2);
 
       const fx = Math.cos(toEnemy);
       const fy = Math.sin(toEnemy);
       const sx = -fy * player.aiStrafe;
       const sy = fx * player.aiStrafe;
 
+      player.aiLunge = Math.max(0, player.aiLunge - dt);
+      if (
+        !def.ranged &&
+        player.aiLunge <= 0 &&
+        player.cooldown <= 0 &&
+        gap < 160 &&
+        gap > overlap &&
+        canSee
+      ) {
+        player.aiLunge = 0.28 + Math.random() * 0.12;
+      }
+
+      const lunging = !def.ranged && player.aiLunge > 0 && canSee;
+
       if (gap < overlap) {
         mx = -fx;
         my = -fy;
+      } else if (!canSee || gap > holdMax + 24) {
+        const step = this.botStepToward(player, nearest.x, nearest.y, dt);
+        mx = step.x;
+        my = step.y;
+      } else if (lunging) {
+        mx = fx;
+        my = fy;
       } else if (gap < holdMin) {
         mx = -fx * 0.85 + sx * 0.7;
         my = -fy * 0.85 + sy * 0.7;
-      } else if (gap > holdMax + 30) {
-        mx = fx * 0.95 + sx * 0.35;
-        my = fy * 0.95 + sy * 0.35;
       } else {
-        const weave = Math.sin(this.time * 7 + player.walkPhase) * 0.28;
+        const weave = Math.sin(this.time * 7 + player.walkPhase) * 0.22;
         mx = sx + fx * weave;
         my = sy + fy * weave;
       }
 
-      if (gap < (def.ranged ? 400 : holdMax + 8)) {
-        if (Math.abs(angleDiff(player.angle, toEnemy)) < 0.7) {
-          this.tryAttack(player);
-        }
+      const canMelee = !def.ranged && gap <= strikeRange + 6;
+      const canShoot = def.ranged && gap < 400 && canSee;
+      if ((canMelee || canShoot) && Math.abs(angleDiff(player.angle, toEnemy)) < 0.85) {
+        this.tryAttack(player);
+        if (canMelee) player.aiLunge = 0;
       }
     }
 
     const len = Math.hypot(mx, my);
     if (len > 0.05) {
-      this.movePlayer(player, (mx / len) * speed * dt, (my / len) * speed * dt);
+      const steered = steerAround(player.x, player.y, mx / len, my / len);
+      this.movePlayer(player, steered.x * speed * dt, steered.y * speed * dt);
       player.walkPhase += dt * 10;
     }
+  }
+
+  botStepToward(player: Player, tx: number, ty: number, dt: number) {
+    player.aiPathAge -= dt;
+    const goalChanged =
+      !player.aiPath.length ||
+      dist(player.aiPath[player.aiPath.length - 1], { x: tx, y: ty }) > 90;
+    if (player.aiPathAge <= 0 || goalChanged) {
+      player.aiPath = findPath(player.x, player.y, tx, ty);
+      player.aiPathAge = 0.28 + Math.random() * 0.12;
+    }
+
+    if (lineClear(player.x, player.y, tx, ty, PLAYER_RADIUS + 2)) {
+      const ang = Math.atan2(ty - player.y, tx - player.x);
+      return { x: Math.cos(ang), y: Math.sin(ang) };
+    }
+
+    const waypoint = followPath(player.aiPath, player.x, player.y);
+    if (!waypoint) {
+      const ang = Math.atan2(ty - player.y, tx - player.x);
+      return { x: Math.cos(ang), y: Math.sin(ang) };
+    }
+    const ang = Math.atan2(waypoint.y - player.y, waypoint.x - player.x);
+    return { x: Math.cos(ang), y: Math.sin(ang) };
   }
 
   separatePlayers() {
@@ -329,10 +378,10 @@ export class Arena {
     for (const other of this.players) {
       if (other.id === player.id || other.dead || other.spawnGuard > 0) continue;
       const d = dist(player, other);
-      if (d > reach + PLAYER_RADIUS) continue;
+      if (d > reach + PLAYER_RADIUS * 1.35) continue;
       if (!tesla) {
         const to = Math.atan2(other.y - player.y, other.x - player.x);
-        if (Math.abs(angleDiff(player.angle, to)) > 0.85) continue;
+        if (Math.abs(angleDiff(player.angle, to)) > 1.05) continue;
       }
       this.hurt(other, damage, player);
     }

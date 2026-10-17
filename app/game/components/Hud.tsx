@@ -93,7 +93,7 @@ export function Hud({ ui }: { ui: HudSnapshot }) {
         <div>PING: {ui.ping} / 150</div>
       </div>
 
-      <div className="absolute bottom-4 left-4 text-[12px] font-bold text-black/55">
+      <div className="absolute bottom-4 left-[260px] text-[12px] font-bold text-black/55">
         WASD move · mouse aim · click attack · Shift scoreboard
       </div>
     </div>

@@ -81,6 +81,9 @@ export type Player = {
   targetId: string | null;
   aiTimer: number;
   aiStrafe: number;
+  aiLunge: number;
+  aiPath: { x: number; y: number }[];
+  aiPathAge: number;
 };
 
 export type GroundWeapon = {

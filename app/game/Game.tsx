@@ -8,6 +8,7 @@ import {
   bakeMap,
   drawGroundWeapon,
   drawHeaven,
+  drawMinimap,
   drawPlayer,
   drawProjectile,
   PLAYER_RADIUS,
@@ -135,7 +136,7 @@ export function Game() {
         drawProjectile(ctx, projectile);
       }
       for (const player of arena.players) {
-        drawPlayer(ctx, player);
+        drawPlayer(ctx, player, { showHealth: player.id !== arena.youId });
         if (!player.dead && player.spawnGuard <= 0) {
           ctx.strokeStyle = "rgba(0,0,0,0.08)";
           ctx.beginPath();
@@ -144,6 +145,18 @@ export function Game() {
         }
       }
       ctx.restore();
+
+      drawMinimap(
+        ctx,
+        map,
+        arena.players,
+        arena.weapons,
+        arena.youId,
+        arena.camera,
+        canvas.width,
+        canvas.height,
+        arena.time,
+      );
 
       if (now - uiStamp > 50) {
         uiStamp = now;

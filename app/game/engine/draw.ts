@@ -4,6 +4,79 @@ import type { Furniture, GroundWeapon, Player, Projectile, WeaponId } from "../t
 
 export const PLAYER_RADIUS = 14;
 
+export const MINIMAP = { width: 228, height: 228 * (MAP_H / MAP_W), pad: 16 };
+
+export function drawMinimap(
+  ctx: CanvasRenderingContext2D,
+  map: HTMLCanvasElement,
+  players: Player[],
+  weapons: GroundWeapon[],
+  youId: string,
+  camera: { x: number; y: number },
+  viewW: number,
+  viewH: number,
+  time: number,
+) {
+  const width = MINIMAP.width;
+  const height = MINIMAP.height;
+  const x = MINIMAP.pad;
+  const y = ctx.canvas.height - height - MINIMAP.pad - 22;
+
+  ctx.save();
+  ctx.fillStyle = "rgba(255,255,255,0.82)";
+  roundRect(ctx, x - 4, y - 4, width + 8, height + 8, 8);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,0.28)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.save();
+  ctx.beginPath();
+  roundRect(ctx, x, y, width, height, 5);
+  ctx.clip();
+  ctx.drawImage(map, x, y, width, height);
+
+  const sx = width / MAP_W;
+  const sy = height / MAP_H;
+
+  ctx.fillStyle = "#f4c430";
+  for (const weapon of weapons) {
+    if (weapon.hiddenUntil > time) continue;
+    ctx.beginPath();
+    ctx.arc(x + weapon.x * sx, y + weapon.y * sy, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const viewX = x + (camera.x - viewW / 2) * sx;
+  const viewY = y + (camera.y - viewH / 2) * sy;
+  ctx.strokeStyle = "rgba(255,255,255,0.85)";
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(viewX, viewY, viewW * sx, viewH * sy);
+
+  for (const player of players) {
+    if (player.dead) continue;
+    const px = x + player.x * sx;
+    const py = y + player.y * sy;
+    const you = player.id === youId;
+    ctx.fillStyle = you ? "#111" : player.color;
+    ctx.beginPath();
+    ctx.arc(px, py, you ? 4.2 : 3.2, 0, Math.PI * 2);
+    ctx.fill();
+    if (you) {
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+
+  ctx.font = "800 11px Nunito, sans-serif";
+  ctx.fillStyle = "rgba(0,0,0,0.65)";
+  ctx.textAlign = "left";
+  ctx.fillText("THE LOBBY", x + 2, y + height + 16);
+  ctx.restore();
+}
+
 export function drawHeaven(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -259,7 +332,11 @@ function drawFurniture(ctx: CanvasRenderingContext2D, piece: Furniture) {
   ctx.restore();
 }
 
-export function drawPlayer(ctx: CanvasRenderingContext2D, player: Player) {
+export function drawPlayer(
+  ctx: CanvasRenderingContext2D,
+  player: Player,
+  options: { showHealth?: boolean } = {},
+) {
   const { x, y, angle } = player;
   ctx.save();
   ctx.translate(x, y);
@@ -342,6 +419,25 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, player: Player) {
   ctx.strokeText(player.name, x, y - 42);
   ctx.fillText(player.name, x, y - 42);
   ctx.restore();
+
+  if (options.showHealth && !player.dead) {
+    const pct = Math.max(0, player.health / player.maxHealth);
+    const barW = 42;
+    const barH = 5;
+    const barX = x - barW / 2;
+    const barY = y - 58;
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
+    ctx.fillStyle = "#f0d0d0";
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = pct > 0.35 ? "#e11d2a" : "#7a0f16";
+    ctx.fillRect(barX, barY, barW * pct, barH);
+    ctx.strokeStyle = "rgba(255,255,255,0.85)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX - 0.5, barY - 0.5, barW + 1, barH + 1);
+    ctx.restore();
+  }
 }
 
 function drawHeldWeapon(ctx: CanvasRenderingContext2D, weapon: WeaponId, swing: number) {
