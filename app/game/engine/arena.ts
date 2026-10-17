@@ -381,8 +381,8 @@ export class Arena {
 
     if (player.weapon === "sledge") {
       this.slams.push({
-        x: player.x + Math.cos(player.angle) * 52,
-        y: player.y + Math.sin(player.angle) * 52,
+        x: player.x + Math.cos(player.angle) * 88,
+        y: player.y + Math.sin(player.angle) * 88,
         angle: player.angle,
         age: 0,
         life: 0.42,
@@ -393,13 +393,16 @@ export class Arena {
 
   melee(player: Player, damage: number, reach: number) {
     const tesla = player.weapon === "tesla";
+    const sledge = player.weapon === "sledge";
+    const maxDist = reach + PLAYER_RADIUS * (sledge ? 2.4 : 1.35);
+    const arc = tesla ? Math.PI : sledge ? 2.4 : 1.05;
     for (const other of this.players) {
       if (other.id === player.id || other.dead || other.spawnGuard > 0) continue;
       const d = dist(player, other);
-      if (d > reach + PLAYER_RADIUS * 1.35) continue;
+      if (d > maxDist) continue;
       if (!tesla) {
         const to = Math.atan2(other.y - player.y, other.x - player.x);
-        if (Math.abs(angleDiff(player.angle, to)) > 1.05) continue;
+        if (Math.abs(angleDiff(player.angle, to)) > arc) continue;
       }
       this.hurt(other, damage, player);
     }

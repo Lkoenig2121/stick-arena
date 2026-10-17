@@ -495,19 +495,19 @@ export function drawSlam(ctx: CanvasRenderingContext2D, slam: SlamFx) {
 
   ctx.fillStyle = `rgba(255, 240, 200, ${0.45 * Math.max(0, 1 - t * 3)})`;
   ctx.beginPath();
-  ctx.arc(0, 0, 18 + t * 26, 0, Math.PI * 2);
+  ctx.arc(0, 0, 28 + t * 40, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.strokeStyle = `rgba(40, 30, 20, ${0.55 * alpha})`;
-  ctx.lineWidth = 5 * (1 - t);
+  ctx.lineWidth = 6 * (1 - t);
   ctx.beginPath();
-  ctx.arc(0, 0, 16 + t * 70, 0, Math.PI * 2);
+  ctx.arc(0, 0, 24 + t * 120, 0, Math.PI * 2);
   ctx.stroke();
 
   ctx.strokeStyle = `rgba(90, 70, 45, ${0.35 * alpha})`;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(0, 0, 28 + t * 95, 0, Math.PI * 2);
+  ctx.arc(0, 0, 42 + t * 160, 0, Math.PI * 2);
   ctx.stroke();
 
   ctx.strokeStyle = `rgba(30, 24, 18, ${0.7 * alpha})`;

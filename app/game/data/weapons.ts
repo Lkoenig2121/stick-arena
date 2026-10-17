@@ -111,7 +111,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     pellets: 1,
     bulletSpeed: 0,
     range: 0,
-    meleeReach: 54,
+    meleeReach: 160,
     killVerb: "flattened",
     killFlavor: "",
   },
