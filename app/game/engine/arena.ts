@@ -16,6 +16,7 @@ import type {
   Player,
   Projectile,
   Rect,
+  SlamFx,
   WeaponId,
 } from "../types";
 import { PLAYER_RADIUS } from "./draw";
@@ -32,6 +33,7 @@ export class Arena {
   youId = "you";
   weapons: GroundWeapon[] = [];
   projectiles: Projectile[] = [];
+  slams: SlamFx[] = [];
   blood: BloodSplat[] = [];
   feed: KillEvent[] = [];
   time = 0;
@@ -52,6 +54,7 @@ export class Arena {
     const youName = freshNames ? randomGuestName() : (this.you()?.name ?? randomGuestName());
     this.players = [];
     this.projectiles = [];
+    this.slams = [];
     this.blood = [];
     this.feed = [];
     this.time = 0;
@@ -86,6 +89,8 @@ export class Arena {
       color,
       x: spawn.x,
       y: spawn.y,
+      lastX: spawn.x,
+      lastY: spawn.y,
       angle: Math.random() * Math.PI * 2,
       health: MAX_HEALTH,
       maxHealth: MAX_HEALTH,
@@ -138,11 +143,14 @@ export class Arena {
 
       this.unstuck(player);
       this.pickupWeapons(player);
+      player.lastX = player.x;
+      player.lastY = player.y;
     }
 
     this.separatePlayers();
     this.updateProjectiles(dt);
     this.blood = this.blood.filter((b) => (b.life -= dt) > 0);
+    this.slams = this.slams.filter((s) => (s.age += dt) < s.life);
     this.feed = this.feed.filter((f) => (f.age += dt) < 5);
 
     const you = this.you();
@@ -340,10 +348,11 @@ export class Arena {
     if (player.cooldown > 0 || player.dead) return;
     const def = WEAPONS[player.weapon];
     player.cooldown = def.reload;
-    player.attackFlash = 0.16;
+    player.attackFlash = player.weapon === "sledge" ? 0.42 : 0.16;
 
     if (def.ranged) {
       if (player.weapon === "railgun") {
+        if (player.isBot) player.angle += this.botRailMiss(player);
         this.fireRail(player, def.damage);
         return;
       }
@@ -370,6 +379,15 @@ export class Arena {
       return;
     }
 
+    if (player.weapon === "sledge") {
+      this.slams.push({
+        x: player.x + Math.cos(player.angle) * 52,
+        y: player.y + Math.sin(player.angle) * 52,
+        angle: player.angle,
+        age: 0,
+        life: 0.42,
+      });
+    }
     this.melee(player, def.damage, def.meleeReach);
   }
 
@@ -387,18 +405,37 @@ export class Arena {
     }
   }
 
+  botRailMiss(player: Player) {
+    const target = this.players.find((p) => p.id === player.targetId && !p.dead);
+    const moved = target ? Math.hypot(target.x - target.lastX, target.y - target.lastY) : 0;
+    const sign = Math.random() < 0.5 ? -1 : 1;
+    if (moved > 2.2) {
+      return sign * (0.18 + Math.random() * 0.34);
+    }
+    return sign * (0.02 + Math.random() * 0.05);
+  }
+
   fireRail(player: Player, damage: number) {
-    const steps = 40;
-    const step = 36;
-    let x = player.x + Math.cos(player.angle) * 24;
-    let y = player.y + Math.sin(player.angle) * 24;
+    const ox = player.x + Math.cos(player.angle) * 28;
+    const oy = player.y + Math.sin(player.angle) * 28;
+    const steps = 80;
+    const step = 18;
+    let x = ox;
+    let y = oy;
+    const hit = new Set<string>();
     for (let i = 0; i < steps; i++) {
       x += Math.cos(player.angle) * step;
       y += Math.sin(player.angle) * step;
-      if (collides(x, y, 4)) break;
+      if (collides(x, y, 4)) {
+        x -= Math.cos(player.angle) * 8;
+        y -= Math.sin(player.angle) * 8;
+        break;
+      }
       for (const other of this.players) {
         if (other.id === player.id || other.dead || other.spawnGuard > 0) continue;
-        if (dist({ x, y }, other) < PLAYER_RADIUS + 6) {
+        if (hit.has(other.id)) continue;
+        if (dist({ x, y }, other) < PLAYER_RADIUS + 8) {
+          hit.add(other.id);
           this.hurt(other, damage, player);
         }
       }
@@ -406,13 +443,15 @@ export class Arena {
     this.projectiles.push({
       x,
       y,
-      vx: Math.cos(player.angle) * 10,
-      vy: Math.sin(player.angle) * 10,
-      life: 0.08,
+      ox,
+      oy,
+      vx: 0,
+      vy: 0,
+      life: 0.22,
       damage: 0,
       ownerId: player.id,
       kind: "rail",
-      length: Math.hypot(x - player.x, y - player.y),
+      length: Math.hypot(x - ox, y - oy),
     });
   }
 
@@ -422,7 +461,12 @@ export class Arena {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       p.life -= dt;
-      if (p.life <= 0 || collides(p.x, p.y, 3)) continue;
+      if (p.life <= 0) continue;
+      if (p.kind === "rail") {
+        next.push(p);
+        continue;
+      }
+      if (collides(p.x, p.y, 3)) continue;
       let hit = false;
       for (const other of this.players) {
         if (other.id === p.ownerId || other.dead || other.spawnGuard > 0) continue;

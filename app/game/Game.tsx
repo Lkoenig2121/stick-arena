@@ -11,6 +11,7 @@ import {
   drawMinimap,
   drawPlayer,
   drawProjectile,
+  drawSlam,
   PLAYER_RADIUS,
 } from "./engine/draw";
 import type { HudSnapshot } from "./types";
@@ -134,6 +135,9 @@ export function Game() {
       }
       for (const projectile of arena.projectiles) {
         drawProjectile(ctx, projectile);
+      }
+      for (const slam of arena.slams) {
+        drawSlam(ctx, slam);
       }
       for (const player of arena.players) {
         drawPlayer(ctx, player, { showHealth: player.id !== arena.youId });

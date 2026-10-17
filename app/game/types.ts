@@ -65,6 +65,8 @@ export type Player = {
   color: string;
   x: number;
   y: number;
+  lastX: number;
+  lastY: number;
   angle: number;
   health: number;
   maxHealth: number;
@@ -104,6 +106,16 @@ export type Projectile = {
   ownerId: string;
   kind: "bullet" | "pellet" | "flame" | "rail";
   length?: number;
+  ox?: number;
+  oy?: number;
+};
+
+export type SlamFx = {
+  x: number;
+  y: number;
+  angle: number;
+  age: number;
+  life: number;
 };
 
 export type BloodSplat = {

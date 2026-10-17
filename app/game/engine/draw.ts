@@ -1,6 +1,6 @@
 import { FURNITURE, MAP_H, MAP_W, WALLS, FLOORS } from "../data/lobby";
 import { WEAPONS } from "../data/weapons";
-import type { Furniture, GroundWeapon, Player, Projectile, WeaponId } from "../types";
+import type { Furniture, GroundWeapon, Player, Projectile, SlamFx, WeaponId } from "../types";
 
 export const PLAYER_RADIUS = 14;
 
@@ -372,7 +372,12 @@ export function drawPlayer(
 
   ctx.rotate(angle);
 
-  const swing = player.attackFlash > 0 ? Math.sin(player.attackFlash * 18) * 0.45 : 0;
+  const swing =
+    player.weapon === "sledge" && player.attackFlash > 0
+      ? sledgeSwing(player.attackFlash)
+      : player.attackFlash > 0
+        ? Math.sin(player.attackFlash * 18) * 0.45
+        : 0;
   const walk = Math.sin(player.walkPhase) * 0.28;
 
   ctx.strokeStyle = "#111";
@@ -398,7 +403,10 @@ export function drawPlayer(
   ctx.lineTo(18, -2 - swing * 10);
   ctx.stroke();
 
-  drawHeldWeapon(ctx, player.weapon, swing);
+  if (player.weapon === "sledge" && player.attackFlash > 0) {
+    drawSledgeSwoosh(ctx, player.attackFlash);
+  }
+  drawHeldWeapon(ctx, player.weapon, swing, player.weapon === "sledge" ? 1.35 : 1);
 
   ctx.fillStyle = "#f4f0e6";
   ctx.strokeStyle = "#111";
@@ -440,11 +448,88 @@ export function drawPlayer(
   }
 }
 
-function drawHeldWeapon(ctx: CanvasRenderingContext2D, weapon: WeaponId, swing: number) {
+function sledgeSwing(flash: number) {
+  const t = 1 - Math.min(1, flash / 0.42);
+  if (t < 0.38) return -1.25 * (t / 0.38);
+  return -1.25 + 2.55 * ((t - 0.38) / 0.62);
+}
+
+function drawSledgeSwoosh(ctx: CanvasRenderingContext2D, flash: number) {
+  const t = 1 - Math.min(1, flash / 0.42);
+  if (t < 0.35) return;
+  const alpha = (1 - t) * 0.55;
   ctx.save();
-  ctx.translate(20, -4 - swing * 8);
+  ctx.strokeStyle = `rgba(40, 40, 40, ${alpha})`;
+  ctx.lineWidth = 7;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.arc(8, 4, 34, -1.1, 0.9, false);
+  ctx.stroke();
+  ctx.strokeStyle = `rgba(180, 180, 180, ${alpha * 0.7})`;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(8, 4, 28, -0.8, 0.7, false);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawHeldWeapon(
+  ctx: CanvasRenderingContext2D,
+  weapon: WeaponId,
+  swing: number,
+  scale = 1,
+) {
+  ctx.save();
+  ctx.translate(20, -4 - swing * 10);
   ctx.rotate(swing);
-  drawWeaponGlyph(ctx, weapon, 1);
+  drawWeaponGlyph(ctx, weapon, scale);
+  ctx.restore();
+}
+
+export function drawSlam(ctx: CanvasRenderingContext2D, slam: SlamFx) {
+  const t = slam.age / slam.life;
+  const alpha = 1 - t;
+  ctx.save();
+  ctx.translate(slam.x, slam.y);
+  ctx.rotate(slam.angle);
+
+  ctx.fillStyle = `rgba(255, 240, 200, ${0.45 * Math.max(0, 1 - t * 3)})`;
+  ctx.beginPath();
+  ctx.arc(0, 0, 18 + t * 26, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = `rgba(40, 30, 20, ${0.55 * alpha})`;
+  ctx.lineWidth = 5 * (1 - t);
+  ctx.beginPath();
+  ctx.arc(0, 0, 16 + t * 70, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = `rgba(90, 70, 45, ${0.35 * alpha})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(0, 0, 28 + t * 95, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = `rgba(30, 24, 18, ${0.7 * alpha})`;
+  ctx.lineWidth = 3;
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const inner = 8;
+    const outer = 22 + t * 38;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * inner, Math.sin(a) * inner);
+    ctx.lineTo(Math.cos(a) * outer, Math.sin(a) * outer);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = `rgba(70, 52, 32, ${0.5 * alpha})`;
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + t;
+    const d = 12 + t * 46;
+    ctx.beginPath();
+    ctx.arc(Math.cos(a) * d, Math.sin(a) * d, 3.5 * (1 - t * 0.4), 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.restore();
 }
 
@@ -536,13 +621,15 @@ export function drawWeaponGlyph(
       break;
     case "sledge":
       ctx.strokeStyle = "#5c4033";
-      ctx.lineWidth = 5;
+      ctx.lineWidth = 6;
       ctx.beginPath();
-      ctx.moveTo(-10, 10);
-      ctx.lineTo(8, -8);
+      ctx.moveTo(-12, 12);
+      ctx.lineTo(10, -10);
       ctx.stroke();
-      ctx.fillStyle = "#2c2c2c";
-      ctx.fillRect(4, -16, 16, 12);
+      ctx.fillStyle = "#1a1a1a";
+      ctx.fillRect(2, -20, 22, 16);
+      ctx.fillStyle = "#3a3a3a";
+      ctx.fillRect(4, -18, 18, 4);
       break;
     case "flamethrower":
       ctx.fillStyle = "#444";
@@ -630,14 +717,30 @@ export function drawProjectile(ctx: CanvasRenderingContext2D, p: Projectile) {
     ctx.arc(p.x, p.y, 7, 0, Math.PI * 2);
     ctx.fill();
   } else if (p.kind === "rail") {
-    ctx.strokeStyle = "#7fdbff";
-    ctx.lineWidth = 4;
-    ctx.shadowColor = "#7fdbff";
-    ctx.shadowBlur = 10;
-    const ang = Math.atan2(p.vy, p.vx);
+    const ox = p.ox ?? p.x;
+    const oy = p.oy ?? p.y;
+    const alpha = Math.min(1, p.life / 0.12);
+    ctx.lineCap = "round";
+    ctx.shadowColor = "#4db8ff";
+    ctx.shadowBlur = 18;
+    ctx.strokeStyle = `rgba(50, 160, 255, ${0.28 * alpha})`;
+    ctx.lineWidth = 16;
     ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
-    ctx.lineTo(p.x - Math.cos(ang) * (p.length ?? 80), p.y - Math.sin(ang) * (p.length ?? 80));
+    ctx.moveTo(ox, oy);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    ctx.strokeStyle = `rgba(70, 190, 255, ${0.75 * alpha})`;
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(ox, oy);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = `rgba(230, 248, 255, ${alpha})`;
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(ox, oy);
+    ctx.lineTo(p.x, p.y);
     ctx.stroke();
   } else {
     ctx.fillStyle = "#111";
