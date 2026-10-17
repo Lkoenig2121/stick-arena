@@ -30,9 +30,34 @@ const EMPTY_HUD: HudSnapshot = {
   feed: [],
 };
 
-export function Game() {
+export function Game({
+  playerName,
+  place = "The Lobby",
+  botNames,
+  onLeave,
+}: {
+  playerName?: string;
+  place?: string;
+  botNames?: string[];
+  onLeave?: () => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [ui, setUi] = useState<HudSnapshot>(EMPTY_HUD);
+  const leaveRef = useRef(onLeave);
+  leaveRef.current = onLeave;
+  const [ui, setUi] = useState<HudSnapshot>({ ...EMPTY_HUD, place });
+  const [leaving, setLeaving] = useState(false);
+  const leavingRef = useRef(false);
+
+  const stay = () => {
+    leavingRef.current = false;
+    setLeaving(false);
+  };
+
+  const confirmLeave = () => {
+    leavingRef.current = false;
+    setLeaving(false);
+    leaveRef.current?.();
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -40,7 +65,7 @@ export function Game() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const arena = new Arena();
+    const arena = new Arena({ playerName, place, botNames });
     const map = bakeMap();
     const keys = arena.keys;
 
@@ -71,6 +96,21 @@ export function Game() {
       else keys.delete(event.code);
       if (event.code === "ShiftLeft" || event.code === "ShiftRight" || event.code === "KeyB" || event.code === "Digit1") {
         arena.scoreboard = down;
+      }
+      if (down && event.code === "Escape") {
+        event.preventDefault();
+        if (leavingRef.current) {
+          leavingRef.current = false;
+          setLeaving(false);
+        } else {
+          leavingRef.current = true;
+          setLeaving(true);
+        }
+        return;
+      }
+      if (down && event.code === "Enter" && leavingRef.current) {
+        event.preventDefault();
+        leaveRef.current?.();
       }
     };
 
@@ -187,6 +227,46 @@ export function Game() {
     <div className="relative h-dvh w-dvw overflow-hidden bg-[#c5ecff]">
       <canvas ref={canvasRef} className="block h-full w-full touch-none" />
       <Hud ui={ui} />
+      {leaving && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 30,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.4)",
+          }}
+        >
+          <div
+            style={{
+              width: "min(360px, 92vw)",
+              background: "#c0c0c0",
+              color: "#000",
+              borderTop: "2px solid #fff",
+              borderLeft: "2px solid #fff",
+              borderRight: "2px solid #808080",
+              borderBottom: "2px solid #808080",
+              padding: 18,
+              fontFamily: "Verdana, Tahoma, Arial, sans-serif",
+            }}
+          >
+            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 10 }}>Leave Game?</div>
+            <p style={{ margin: "0 0 16px", fontSize: 13, fontWeight: 700 }}>
+              Return to the lobby? Your current match will be abandoned.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button type="button" className="sa-leave-btn" onClick={stay}>
+                Stay
+              </button>
+              <button type="button" className="sa-leave-btn" onClick={confirmLeave}>
+                Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

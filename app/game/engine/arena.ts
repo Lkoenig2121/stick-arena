@@ -45,13 +45,21 @@ export class Arena {
   camera = { x: 0, y: 0 };
   feedSeq = 0;
   ping = 18 + Math.floor(Math.random() * 20);
+  place: string;
+  playerName: string;
+  botNames: string[];
 
-  constructor() {
+  constructor(opts?: { playerName?: string; place?: string; botNames?: string[] }) {
+    this.place = opts?.place ?? PLACE_NAME;
+    this.playerName = opts?.playerName ?? "";
+    this.botNames = opts?.botNames?.length ? opts.botNames : BOT_NAMES.slice(0, 4);
     this.reset(true);
   }
 
   reset(freshNames = false) {
-    const youName = freshNames ? randomGuestName() : (this.you()?.name ?? randomGuestName());
+    const youName =
+      this.playerName ||
+      (freshNames ? randomGuestName() : (this.you()?.name ?? randomGuestName()));
     this.players = [];
     this.projectiles = [];
     this.slams = [];
@@ -61,7 +69,7 @@ export class Arena {
     this.timeLeft = ROUND_TIME;
 
     this.players.push(this.makePlayer(this.youId, youName, "#111111", false, 0));
-    const bots = BOT_NAMES.slice(0, 4);
+    const bots = this.botNames.slice(0, 4);
     bots.forEach((name, i) => {
       this.players.push(
         this.makePlayer(`bot-${i}`, name, BOT_COLORS[i % BOT_COLORS.length], true, i + 1),
@@ -526,7 +534,7 @@ export class Arena {
       health: you?.health ?? 0,
       maxHealth: MAX_HEALTH,
       weapon: you?.weapon ?? "fists",
-      place: PLACE_NAME,
+      place: this.place,
       rank,
       timeLeft: this.timeLeft,
       fps,

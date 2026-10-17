@@ -1,5 +1,5 @@
-import { Game } from "./game/Game";
+import { StickArenaApp } from "./menu/StickArenaApp";
 
 export default function Home() {
-  return <Game />;
+  return <StickArenaApp />;
 }
