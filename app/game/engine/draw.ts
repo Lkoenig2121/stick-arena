@@ -1,6 +1,6 @@
 import { FURNITURE, MAP_H, MAP_W, WALLS, FLOORS } from "../data/lobby";
 import { WEAPONS } from "../data/weapons";
-import type { Furniture, GroundWeapon, Player, Projectile, SlamFx, WeaponId } from "../types";
+import type { Furniture, GroundWeapon, Player, Projectile, SlashFx, SlamFx, WeaponId } from "../types";
 
 export const PLAYER_RADIUS = 14;
 
@@ -375,9 +375,11 @@ export function drawPlayer(
   const swing =
     player.weapon === "sledge" && player.attackFlash > 0
       ? sledgeSwing(player.attackFlash)
-      : player.attackFlash > 0
-        ? Math.sin(player.attackFlash * 18) * 0.45
-        : 0;
+      : isSword(player.weapon) && player.attackFlash > 0
+        ? swordSwing(player.attackFlash)
+        : player.attackFlash > 0
+          ? Math.sin(player.attackFlash * 18) * 0.45
+          : 0;
   const walk = Math.sin(player.walkPhase) * 0.28;
 
   ctx.strokeStyle = "#111";
@@ -406,7 +408,10 @@ export function drawPlayer(
   if (player.weapon === "sledge" && player.attackFlash > 0) {
     drawSledgeSwoosh(ctx, player.attackFlash);
   }
-  drawHeldWeapon(ctx, player.weapon, swing, player.weapon === "sledge" ? 1.35 : 1);
+  if (isSword(player.weapon) && player.attackFlash > 0) {
+    drawSwordSwoosh(ctx, player.attackFlash, player.weapon);
+  }
+  drawHeldWeapon(ctx, player.weapon, swing, player.weapon === "sledge" ? 1.35 : isSword(player.weapon) ? 1.45 : 1);
 
   ctx.fillStyle = "#f4f0e6";
   ctx.strokeStyle = "#111";
@@ -448,6 +453,38 @@ export function drawPlayer(
   }
 }
 
+function isSword(weapon: WeaponId): weapon is "katana" | "lasersword" {
+  return weapon === "katana" || weapon === "lasersword";
+}
+
+function swordSwing(flash: number) {
+  const t = 1 - Math.min(1, flash / 0.34);
+  if (t < 0.22) return 1.35 * (t / 0.22);
+  return 1.35 - 2.85 * Math.min(1, (t - 0.22) / 0.55);
+}
+
+function drawSwordSwoosh(ctx: CanvasRenderingContext2D, flash: number, kind: "katana" | "lasersword") {
+  const t = 1 - Math.min(1, flash / 0.34);
+  if (t < 0.2) return;
+  const alpha = Math.max(0, 1 - t) * 0.9;
+  const laser = kind === "lasersword";
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.strokeStyle = laser ? `rgba(57, 255, 20, ${alpha})` : `rgba(230, 240, 255, ${alpha})`;
+  ctx.shadowColor = laser ? "#39ff14" : "#ffffff";
+  ctx.shadowBlur = laser ? 14 : 8;
+  ctx.lineWidth = laser ? 9 : 7;
+  ctx.beginPath();
+  ctx.arc(12, 2, 56, -1.35, 1.05, false);
+  ctx.stroke();
+  ctx.strokeStyle = laser ? `rgba(200, 255, 180, ${alpha * 0.85})` : `rgba(255, 255, 255, ${alpha})`;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(12, 2, 48, -1.15, 0.9, false);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function sledgeSwing(flash: number) {
   const t = 1 - Math.min(1, flash / 0.42);
   if (t < 0.38) return -1.25 * (t / 0.38);
@@ -483,6 +520,41 @@ function drawHeldWeapon(
   ctx.translate(20, -4 - swing * 10);
   ctx.rotate(swing);
   drawWeaponGlyph(ctx, weapon, scale);
+  ctx.restore();
+}
+
+export function drawSlash(ctx: CanvasRenderingContext2D, slash: SlashFx) {
+  const t = slash.age / slash.life;
+  const alpha = Math.max(0, 1 - t);
+  const laser = slash.kind === "lasersword";
+  const sweep = -1.4 + t * 2.6;
+  ctx.save();
+  ctx.translate(slash.x, slash.y);
+  ctx.rotate(slash.angle);
+
+  ctx.strokeStyle = laser ? `rgba(57, 255, 20, ${0.35 * alpha})` : `rgba(220, 230, 245, ${0.28 * alpha})`;
+  ctx.lineWidth = 18 * (1 - t * 0.35);
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.arc(0, 0, 78 + t * 22, sweep - 0.85, sweep + 0.15);
+  ctx.stroke();
+
+  ctx.strokeStyle = laser ? `rgba(180, 255, 140, ${0.9 * alpha})` : `rgba(255, 255, 255, ${0.85 * alpha})`;
+  ctx.shadowColor = laser ? "#39ff14" : "#ffffff";
+  ctx.shadowBlur = laser ? 16 : 10;
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.arc(0, 0, 84 + t * 26, sweep - 0.7, sweep + 0.08);
+  ctx.stroke();
+
+  ctx.fillStyle = laser ? `rgba(57, 255, 20, ${0.55 * alpha})` : `rgba(240, 245, 255, ${0.5 * alpha})`;
+  for (let i = 0; i < 5; i++) {
+    const a = sweep - 0.55 + i * 0.18;
+    const d = 66 + t * 32 + i * 5;
+    ctx.beginPath();
+    ctx.arc(Math.cos(a) * d, Math.sin(a) * d, 2.4 * (1 - t), 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.restore();
 }
 
@@ -581,20 +653,20 @@ export function drawWeaponGlyph(
       ctx.strokeStyle = "#dfe7ef";
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(-8, 6);
-      ctx.lineTo(24, -12);
+      ctx.moveTo(-10, 8);
+      ctx.lineTo(36, -18);
       ctx.stroke();
       ctx.strokeStyle = "#222";
       ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.moveTo(-14, 10);
+      ctx.moveTo(-16, 12);
       ctx.lineTo(-6, 5);
       ctx.stroke();
       ctx.strokeStyle = "#b03a2e";
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(-8, 8);
-      ctx.lineTo(-2, 2);
+      ctx.lineTo(-1, 2);
       ctx.stroke();
       break;
     case "glock":
@@ -672,14 +744,14 @@ export function drawWeaponGlyph(
       ctx.shadowBlur = 8;
       ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.moveTo(-4, 6);
-      ctx.lineTo(22, -14);
+      ctx.moveTo(-6, 8);
+      ctx.lineTo(38, -20);
       ctx.stroke();
       ctx.shadowBlur = 0;
       ctx.strokeStyle = "#222";
       ctx.lineWidth = 5;
       ctx.beginPath();
-      ctx.moveTo(-10, 10);
+      ctx.moveTo(-12, 12);
       ctx.lineTo(-2, 4);
       ctx.stroke();
       break;

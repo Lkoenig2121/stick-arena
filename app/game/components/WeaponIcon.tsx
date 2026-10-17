@@ -27,7 +27,7 @@ function glyph(weapon: WeaponId) {
     case "katana":
       return (
         <g>
-          <path d="M16 34 L72 10" stroke="#dfe7ef" strokeWidth="4" />
+          <path d="M12 36 L74 8" stroke="#dfe7ef" strokeWidth="4" />
           <path d="M10 38 L22 30" stroke="#222" strokeWidth="5" />
           <path d="M18 34 L26 28" stroke="#b03a2e" strokeWidth="3" />
         </g>
@@ -88,7 +88,7 @@ function glyph(weapon: WeaponId) {
     case "lasersword":
       return (
         <g>
-          <path d="M18 34 L68 10" stroke="#39ff14" strokeWidth="5" />
+          <path d="M16 34 L74 8" stroke="#39ff14" strokeWidth="5" />
           <path d="M12 38 L22 30" stroke="#222" strokeWidth="6" />
         </g>
       );

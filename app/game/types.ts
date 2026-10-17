@@ -118,6 +118,15 @@ export type SlamFx = {
   life: number;
 };
 
+export type SlashFx = {
+  x: number;
+  y: number;
+  angle: number;
+  age: number;
+  life: number;
+  kind: "katana" | "lasersword";
+};
+
 export type BloodSplat = {
   x: number;
   y: number;

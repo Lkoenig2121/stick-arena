@@ -16,6 +16,7 @@ import type {
   Player,
   Projectile,
   Rect,
+  SlashFx,
   SlamFx,
   WeaponId,
 } from "../types";
@@ -34,6 +35,7 @@ export class Arena {
   weapons: GroundWeapon[] = [];
   projectiles: Projectile[] = [];
   slams: SlamFx[] = [];
+  slashes: SlashFx[] = [];
   blood: BloodSplat[] = [];
   feed: KillEvent[] = [];
   time = 0;
@@ -63,6 +65,7 @@ export class Arena {
     this.players = [];
     this.projectiles = [];
     this.slams = [];
+    this.slashes = [];
     this.blood = [];
     this.feed = [];
     this.time = 0;
@@ -159,6 +162,7 @@ export class Arena {
     this.updateProjectiles(dt);
     this.blood = this.blood.filter((b) => (b.life -= dt) > 0);
     this.slams = this.slams.filter((s) => (s.age += dt) < s.life);
+    this.slashes = this.slashes.filter((s) => (s.age += dt) < s.life);
     this.feed = this.feed.filter((f) => (f.age += dt) < 5);
 
     const you = this.you();
@@ -356,7 +360,8 @@ export class Arena {
     if (player.cooldown > 0 || player.dead) return;
     const def = WEAPONS[player.weapon];
     player.cooldown = def.reload;
-    player.attackFlash = player.weapon === "sledge" ? 0.42 : 0.16;
+    player.attackFlash =
+      player.weapon === "sledge" ? 0.42 : player.weapon === "katana" || player.weapon === "lasersword" ? 0.34 : 0.16;
 
     if (def.ranged) {
       if (player.weapon === "railgun") {
@@ -396,14 +401,25 @@ export class Arena {
         life: 0.42,
       });
     }
+    if (player.weapon === "katana" || player.weapon === "lasersword") {
+      this.slashes.push({
+        x: player.x + Math.cos(player.angle) * 44,
+        y: player.y + Math.sin(player.angle) * 44,
+        angle: player.angle,
+        age: 0,
+        life: 0.28,
+        kind: player.weapon,
+      });
+    }
     this.melee(player, def.damage, def.meleeReach);
   }
 
   melee(player: Player, damage: number, reach: number) {
     const tesla = player.weapon === "tesla";
     const sledge = player.weapon === "sledge";
-    const maxDist = reach + PLAYER_RADIUS * (sledge ? 2.4 : 1.35);
-    const arc = tesla ? Math.PI : sledge ? 2.4 : 1.05;
+    const sword = player.weapon === "katana" || player.weapon === "lasersword";
+    const maxDist = reach + PLAYER_RADIUS * (sledge ? 2.4 : sword ? 1.7 : 1.35);
+    const arc = tesla ? Math.PI : sledge ? 2.4 : sword ? 1.35 : 1.05;
     for (const other of this.players) {
       if (other.id === player.id || other.dead || other.spawnGuard > 0) continue;
       const d = dist(player, other);

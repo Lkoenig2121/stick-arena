@@ -11,6 +11,7 @@ import {
   drawMinimap,
   drawPlayer,
   drawProjectile,
+  drawSlash,
   drawSlam,
   PLAYER_RADIUS,
 } from "./engine/draw";
@@ -178,6 +179,9 @@ export function Game({
       }
       for (const slam of arena.slams) {
         drawSlam(ctx, slam);
+      }
+      for (const slash of arena.slashes) {
+        drawSlash(ctx, slash);
       }
       for (const player of arena.players) {
         drawPlayer(ctx, player, { showHealth: player.id !== arena.youId });
