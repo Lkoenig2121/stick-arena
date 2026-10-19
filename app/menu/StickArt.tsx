@@ -27,7 +27,7 @@ function Stick({
       style={{ left: x, top: y }}
       aria-hidden
     >
-      <circle cx="40" cy="16" r="10" fill="#111" />
+      <circle cx="40" cy="16" r="10" fill="#1a1a1a" />
       {pose === "angry" && (
         <>
           <path d="M34 13 L38 15" stroke="#fff" strokeWidth="1.6" />

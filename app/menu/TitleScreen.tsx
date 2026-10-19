@@ -1,5 +1,59 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { TitleSticks } from "./StickArt";
+
+const root: CSSProperties = {
+  position: "relative",
+  display: "flex",
+  flexDirection: "column",
+  width: "100vw",
+  height: "100dvh",
+  overflow: "hidden",
+  background: "#efe6d2",
+};
+
+const floor: CSSProperties = {
+  position: "absolute",
+  left: 0,
+  right: 0,
+  bottom: 0,
+  height: "38%",
+  background: "#6f7dff",
+};
+
+const floorEdge: CSSProperties = {
+  position: "absolute",
+  left: 0,
+  right: 0,
+  bottom: "38%",
+  height: 10,
+  background: "#4f5fe0",
+};
+
+const title: CSSProperties = {
+  margin: 0,
+  textAlign: "center",
+  fontFamily: "var(--font-fredoka), Nunito, sans-serif",
+  fontSize: "clamp(64px, 12vw, 108px)",
+  lineHeight: 0.85,
+  fontWeight: 800,
+  letterSpacing: "-0.03em",
+  color: "#eef6ff",
+  textShadow: "6px 8px 0 #6b8eae",
+};
+
+const stack: CSSProperties = {
+  position: "relative",
+  zIndex: 10,
+  margin: "0 auto",
+  display: "flex",
+  flex: 1,
+  width: "100%",
+  maxWidth: 560,
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "0 24px",
+};
 
 export function TitleScreen({
   onQuickStart,
@@ -13,19 +67,18 @@ export function TitleScreen({
   onHowTo: () => void;
 }) {
   return (
-    <div className="relative flex h-dvh w-dvw flex-col overflow-hidden bg-[#f4f1ea]">
-      <div className="absolute inset-x-0 bottom-0 h-[38%] bg-[#6f7dff]" />
-      <div className="absolute inset-x-0 bottom-[38%] h-3 bg-[#5a68e6]" />
+    <div id="sa-title" style={root}>
+      <div style={floor} />
+      <div style={floorEdge} />
       <TitleSticks />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-6">
-        <h1 className="text-center font-[var(--font-fredoka),Nunito,sans-serif] text-7xl leading-[0.85] font-black tracking-tight text-[#eef6ff] drop-shadow-[6px_8px_0_#6b8eae] sm:text-8xl">
+      <div style={stack}>
+        <h1 style={title}>
           STICK
           <br />
           ARENA
         </h1>
-
-        <div className="mt-10 flex w-72 flex-col gap-3">
+        <div style={{ marginTop: 40, display: "flex", width: 288, flexDirection: "column", gap: 12 }}>
           <MenuButton onClick={onQuickStart}>Quick Start!</MenuButton>
           <MenuButton onClick={onLogin}>Log In</MenuButton>
           <MenuButton onClick={onCreate}>Create Account</MenuButton>
@@ -33,7 +86,17 @@ export function TitleScreen({
         </div>
       </div>
 
-      <p className="relative z-10 pb-3 text-center text-[11px] font-bold text-black/45">
+      <p
+        style={{
+          position: "relative",
+          zIndex: 10,
+          paddingBottom: 12,
+          textAlign: "center",
+          fontSize: 11,
+          fontWeight: 700,
+          color: "rgba(0,0,0,0.4)",
+        }}
+      >
         © 2003–2006 XGen Studios, Inc. · recreation
       </p>
     </div>
@@ -48,11 +111,7 @@ function MenuButton({
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="rounded-full border border-[#7f8ea0] bg-[#c9d3df] px-6 py-2.5 text-lg font-black text-[#334155] shadow-[inset_0_1px_0_#fff] transition hover:bg-[#dbe3ec] active:translate-y-px"
-    >
+    <button type="button" className="sa-title-btn" onClick={onClick}>
       {children}
     </button>
   );

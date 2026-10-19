@@ -64,10 +64,21 @@ export function StickArenaApp() {
 
   if (screen === "howto") {
     return (
-      <div className="flex h-dvh w-dvw items-center justify-center bg-[#f4f1ea] p-6">
-        <div className="w-[min(460px,92vw)] rounded-xl bg-white p-6 shadow-xl">
-          <h2 className="mb-3 text-2xl font-black">How to Play</h2>
-          <ul className="space-y-2 text-sm font-bold text-[#334155]">
+      <div
+        id="sa-card"
+        style={{
+          display: "flex",
+          width: "100vw",
+          height: "100dvh",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#efe6d2",
+          padding: 24,
+        }}
+      >
+        <div className="sa-card-box" style={{ width: "min(460px, 92vw)" }}>
+          <h2 style={{ margin: "0 0 12px", fontSize: 26, fontWeight: 800 }}>How to Play</h2>
+          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, fontWeight: 700, lineHeight: 1.7, color: "#2a3a4c" }}>
             <li>WASD or arrows to move</li>
             <li>Mouse aims, click or Space attacks</li>
             <li>Walk over a weapon to pick it up</li>
@@ -75,11 +86,7 @@ export function StickArenaApp() {
             <li>Esc asks to leave the match</li>
             <li>Most kills when the timer ends wins</li>
           </ul>
-          <button
-            type="button"
-            onClick={() => setScreen("title")}
-            className="mt-5 rounded-full bg-[#c9d3df] px-5 py-2 font-black"
-          >
+          <button type="button" className="sa-btn" style={{ marginTop: 20 }} onClick={() => setScreen("title")}>
             Back
           </button>
         </div>
@@ -134,27 +141,39 @@ function AuthCard({
   onSubmit: () => void;
 }) {
   return (
-    <div className="flex h-dvh w-dvw items-center justify-center bg-[#f4f1ea] p-6">
+    <div
+      id="sa-card"
+      style={{
+        display: "flex",
+        width: "100vw",
+        height: "100dvh",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#efe6d2",
+        padding: 24,
+      }}
+    >
       <form
-        className="w-[min(360px,92vw)] rounded-xl bg-white p-6 shadow-xl"
+        className="sa-card-box"
+        style={{ width: "min(360px, 92vw)" }}
         onSubmit={(event) => {
           event.preventDefault();
           onSubmit();
         }}
       >
-        <h2 className="mb-4 text-2xl font-black">{title}</h2>
+        <h2 style={{ margin: "0 0 16px", fontSize: 26, fontWeight: 800 }}>{title}</h2>
         <input
+          className="sa-field"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          className="mb-4 w-full rounded border border-[#7b8b9c] px-3 py-2 font-bold"
           placeholder="Username"
           autoFocus
         />
-        <div className="flex gap-2">
-          <button type="submit" className="rounded-full bg-[#c9d3df] px-5 py-2 font-black">
+        <div style={{ display: "flex", gap: 8 }}>
+          <button type="submit" className="sa-btn">
             Enter Lobby
           </button>
-          <button type="button" onClick={onCancel} className="rounded-full px-4 py-2 font-black">
+          <button type="button" className="sa-btn" onClick={onCancel}>
             Back
           </button>
         </div>

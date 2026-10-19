@@ -12,11 +12,11 @@ import {
   type LobbyPlayer,
 } from "./data";
 
-const SILVER = "#c0c0c0";
-const TEXT = "#000";
-const NAVY = "#000080";
-const BEVEL_DARK = "#808080";
-const BEVEL_LIGHT = "#ffffff";
+const SILVER = "#2a2a2a";
+const TEXT = "#f2f2f2";
+const NAVY = "#ffc14a";
+const BEVEL_DARK = "#161616";
+const BEVEL_LIGHT = "#4a4a4a";
 
 const rootStyle: CSSProperties = {
   position: "relative",
@@ -56,9 +56,9 @@ const fieldStyle: CSSProperties = {
   WebkitAppearance: "none",
   height: 20,
   border: `1px solid ${BEVEL_DARK}`,
-  background: "#f3f3f3",
+  background: "#1a1a1a",
   color: TEXT,
-  boxShadow: "inset 1px 1px 2px #9a9a9a",
+  boxShadow: "inset 1px 1px 2px #000",
   padding: "0 6px",
   font: "700 12px Verdana, Tahoma, sans-serif",
   outline: "none",
@@ -66,7 +66,7 @@ const fieldStyle: CSSProperties = {
 
 const selectStyle: CSSProperties = {
   ...fieldStyle,
-  background: "linear-gradient(180deg, #ffffff 0%, #d8d8d8 100%)",
+  background: "linear-gradient(180deg, #4a4a4a 0%, #2c2c2c 100%)",
   boxShadow: `inset 0 1px 0 ${BEVEL_LIGHT}`,
   fontSize: 11,
   fontWeight: 800,
@@ -78,9 +78,9 @@ const btnStyle: CSSProperties = {
   WebkitAppearance: "none",
   width: "100%",
   borderRadius: 18,
-  border: `1px solid ${BEVEL_DARK}`,
-  background: "linear-gradient(180deg, #ffffff 0%, #ececec 46%, #d4d4d4 100%)",
-  color: "#222",
+  border: "1px solid #a66b00",
+  background: "linear-gradient(180deg, #ffc14a 0%, #f39c12 46%, #c77800 100%)",
+  color: "#1a1200",
   font: "800 15px Verdana, Tahoma, sans-serif",
   padding: "8px 12px",
   boxShadow: `inset 0 1px 0 ${BEVEL_LIGHT}, 0 1px 0 ${BEVEL_DARK}`,
@@ -172,37 +172,12 @@ export function LobbyScreen({
 
   return (
     <div id="sa-lobby" style={rootStyle}>
-      <div
-        style={{
-          height: 22,
-          display: "flex",
-          alignItems: "center",
-          padding: "0 2px",
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: "0.18em",
-          color: "#555",
-        }}
-      >
-        XGEN STUDIOS
-      </div>
+      <div className="sa-header">XGEN STUDIOS</div>
       <div style={colsStyle}>
         <section style={{ display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0 }}>
           <div className="sa-panel" style={{ ...panel, flex: 1 }}>
-            <div
-              ref={chatRef}
-              style={{
-                flex: 1,
-                minHeight: 0,
-                overflow: "auto",
-                padding: "8px 10px",
-                fontSize: 13,
-                fontWeight: 700,
-                lineHeight: 1.45,
-                color: TEXT,
-              }}
-            >
-              <p style={{ margin: "0 0 12px", color: "#444", fontSize: 12, lineHeight: 1.4 }}>
+            <div ref={chatRef} className="sa-chat">
+              <p style={{ margin: "0 0 12px", color: "#d0d0d0", fontSize: 12, lineHeight: 1.4 }}>
                 IF YOU ARE EXPERIENCING SLOW OR CHOPPY GAMEPLAY, TRY THE NEW ENHANCED COMPATIBILITY
                 SERVER FROM THE SERVER LIST IN THE TOP RIGHT CORNER.
               </p>
@@ -228,16 +203,7 @@ export function LobbyScreen({
               />
             </form>
           </div>
-          <div
-            style={{
-              flexShrink: 0,
-              padding: "8px 4px 0",
-              fontSize: 12,
-              fontWeight: 800,
-              lineHeight: 1.55,
-              textTransform: "uppercase",
-            }}
-          >
+          <div className="sa-stats">
             <div>
               PLAYERS: {inGame.length}/{selected.maxPlayers}
               <span style={{ marginLeft: 36 }}>MODE: {selected.mode}</span>
@@ -272,15 +238,12 @@ export function LobbyScreen({
             </div>
             <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
               {extras.map((player) => (
-                <div key={player.name} style={{ padding: "2px 6px", fontSize: 13, fontWeight: 800 }}>
+                <div key={player.name} className="sa-name">
                   {player.name}
                 </div>
               ))}
               {inGame.map((player) => (
-                <div
-                  key={`in-${player.name}`}
-                  style={{ padding: "2px 6px", fontSize: 13, fontWeight: 800, background: player.color }}
-                >
+                <div key={`in-${player.name}`} className="sa-bar" style={{ background: player.color }}>
                   {player.name}
                 </div>
               ))}
@@ -365,7 +328,7 @@ function Modal({
         background: "rgba(0,0,0,0.35)",
       }}
     >
-      <div style={{ width: "min(360px, 92vw)", background: SILVER, border: "1px solid #7a7a7a", padding: 16, color: TEXT }}>
+      <div style={{ width: "min(360px, 92vw)", background: SILVER, border: "1px solid #f39c12", padding: 16, color: TEXT }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
           <strong>{title}</strong>
           <button type="button" className="sa-btn" style={{ ...btnStyle, width: 36, padding: 4 }} onClick={onClose}>

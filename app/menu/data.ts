@@ -23,14 +23,14 @@ export type ChatLine = {
 export const SERVERS = ["Paperthin City", "Newgrounds", "XGen HQ", "Ballistick"];
 
 export const ONLINE: LobbyPlayer[] = [
-  { name: ".GEAR.FIRE.", color: "#80ff80" },
-  { name: "NYCOLIVER", color: "#80ffff" },
-  { name: "HOTT5", color: "#ffff66" },
-  { name: "$XIPRINCESS$", color: "#ffb0ff" },
-  { name: "SOULJARBOY", color: "#b0e0ff" },
-  { name: "Goodpeterson", color: "#80ff80" },
-  { name: "Snarr", color: "#ffb056" },
-  { name: "TriggerClan", color: "#c0c0c0" },
+  { name: ".GEAR.FIRE.", color: "#9cff9c" },
+  { name: "NYCOLIVER", color: "#8cffff" },
+  { name: "HOTT5", color: "#ffff6e" },
+  { name: "$XIPRINCESS$", color: "#ffb8ff" },
+  { name: "SOULJARBOY", color: "#b8e4ff" },
+  { name: "Goodpeterson", color: "#9cff9c" },
+  { name: "Snarr", color: "#ffb86a" },
+  { name: "TriggerClan", color: "#e0e0e0" },
 ];
 
 export const ROOMS: ArenaRoom[] = [
@@ -42,8 +42,8 @@ export const ROOMS: ArenaRoom[] = [
     maxPlayers: 6,
     timeLeft: "4:21",
     players: [
-      { name: "Goodpeterson", color: "#80ff80" },
-      { name: "TriggerClan", color: "#c0c0c0" },
+      { name: "Goodpeterson", color: "#9cff9c" },
+      { name: "TriggerClan", color: "#e0e0e0" },
     ],
   },
   {
@@ -53,7 +53,7 @@ export const ROOMS: ArenaRoom[] = [
     mode: "Random",
     maxPlayers: 4,
     timeLeft: "4:52",
-    players: [{ name: ".GEAR.FIRE.", color: "#80ff80" }],
+    players: [{ name: ".GEAR.FIRE.", color: "#9cff9c" }],
   },
   {
     id: "xgen",
@@ -63,10 +63,10 @@ export const ROOMS: ArenaRoom[] = [
     maxPlayers: 8,
     timeLeft: "3:18",
     players: [
-      { name: "Snarr", color: "#ffb056" },
-      { name: "HOTT5", color: "#ffff66" },
-      { name: "NYCOLIVER", color: "#80ffff" },
-      { name: "SOULJARBOY", color: "#b0e0ff" },
+      { name: "Snarr", color: "#ffb86a" },
+      { name: "HOTT5", color: "#ffff6e" },
+      { name: "NYCOLIVER", color: "#8cffff" },
+      { name: "SOULJARBOY", color: "#b8e4ff" },
     ],
   },
   {
@@ -77,7 +77,7 @@ export const ROOMS: ArenaRoom[] = [
     maxPlayers: 6,
     timeLeft: "5:00",
     players: [
-      { name: "$XIPRINCESS$", color: "#ffb0ff" },
+      { name: "$XIPRINCESS$", color: "#ffb8ff" },
       { name: "StenkyClodfoot", color: "#ffd18a" },
     ],
   },
