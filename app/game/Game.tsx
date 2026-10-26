@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Hud } from "./components/Hud";
 import { MAP_H, MAP_W } from "./data/lobby";
 import { Arena } from "./engine/arena";
+import { rankFromKills } from "../menu/progress";
 import {
   bakeMap,
   drawGroundWeapon,
@@ -15,6 +16,7 @@ import {
   drawSlam,
   PLAYER_RADIUS,
 } from "./engine/draw";
+import { loadProgress, saveProgress, type MatchRankResult } from "../menu/progress";
 import type { HudSnapshot } from "./types";
 
 const EMPTY_HUD: HudSnapshot = {
@@ -27,6 +29,7 @@ const EMPTY_HUD: HudSnapshot = {
   fps: 0,
   ping: 24,
   scoreboard: false,
+  ended: false,
   players: [],
   feed: [],
 };
@@ -48,6 +51,27 @@ export function Game({
   const [ui, setUi] = useState<HudSnapshot>({ ...EMPTY_HUD, place });
   const [leaving, setLeaving] = useState(false);
   const leavingRef = useRef(false);
+  const endedRef = useRef(false);
+  const arenaRef = useRef<Arena | null>(null);
+  const savedRef = useRef(false);
+  const startKillsRef = useRef(0);
+  const [results, setResults] = useState<{ ui: HudSnapshot; rank: MatchRankResult } | null>(null);
+
+  const persistKills = (): MatchRankResult => {
+    const you = arenaRef.current?.you();
+    const kills = you ? you.lifetimeKills + you.kills : loadProgress().kills;
+    saveProgress({ kills });
+    savedRef.current = true;
+    const previousRank = rankFromKills(startKillsRef.current);
+    const rank = rankFromKills(kills);
+    return {
+      kills,
+      killsGained: you?.kills ?? 0,
+      rank,
+      previousRank,
+      rankedUp: rank > previousRank,
+    };
+  };
 
   const stay = () => {
     leavingRef.current = false;
@@ -57,6 +81,7 @@ export function Game({
   const confirmLeave = () => {
     leavingRef.current = false;
     setLeaving(false);
+    persistKills();
     leaveRef.current?.();
   };
 
@@ -66,7 +91,11 @@ export function Game({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const arena = new Arena({ playerName, place, botNames });
+    const startingKills = loadProgress().kills;
+    startKillsRef.current = startingKills;
+    const arena = new Arena({ playerName, place, botNames, lifetimeKills: startingKills });
+    arenaRef.current = arena;
+    savedRef.current = false;
     const map = bakeMap();
     const keys = arena.keys;
 
@@ -100,6 +129,11 @@ export function Game({
       }
       if (down && event.code === "Escape") {
         event.preventDefault();
+        if (endedRef.current) {
+          persistKills();
+          leaveRef.current?.();
+          return;
+        }
         if (leavingRef.current) {
           leavingRef.current = false;
           setLeaving(false);
@@ -111,6 +145,7 @@ export function Game({
       }
       if (down && event.code === "Enter" && leavingRef.current) {
         event.preventDefault();
+        persistKills();
         leaveRef.current?.();
       }
     };
@@ -151,6 +186,11 @@ export function Game({
       }
 
       arena.update(dt);
+      if (arena.ended && !endedRef.current) {
+        endedRef.current = true;
+        const snapshot = arena.hud(fps);
+        setResults({ ui: snapshot, rank: persistKills() });
+      }
 
       const camX = arena.camera.x - canvas.width / 2;
       const camY = arena.camera.y - canvas.height / 2;
@@ -216,6 +256,8 @@ export function Game({
     raf = requestAnimationFrame(tick);
 
     return () => {
+      const you = arenaRef.current?.you();
+      if (you) saveProgress({ kills: you.lifetimeKills + you.kills });
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
       window.removeEventListener("keydown", downKey);
@@ -227,11 +269,70 @@ export function Game({
     };
   }, []);
 
+  useEffect(() => {
+    if (!results) return;
+    const timer = window.setTimeout(() => {
+      persistKills();
+      leaveRef.current?.();
+    }, 6500);
+    return () => window.clearTimeout(timer);
+  }, [results]);
+
   return (
     <div className="relative h-dvh w-dvw overflow-hidden bg-[#c5ecff]">
       <canvas ref={canvasRef} className="block h-full w-full touch-none" />
       <Hud ui={ui} />
-      {leaving && (
+      {results && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 40,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.5)",
+          }}
+        >
+          <div
+            style={{
+              width: "min(420px, 92vw)",
+              background: "#2a2a2a",
+              color: "#f2f2f2",
+              border: "1px solid #f39c12",
+              padding: 20,
+              fontFamily: "Verdana, Tahoma, Arial, sans-serif",
+            }}
+          >
+            <div style={{ fontWeight: 800, fontSize: 20, color: "#ffc14a", marginBottom: 8 }}>MATCH OVER</div>
+            <p style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 700 }}>
+              You placed {ordinal(results.ui.rank)} with {results.ui.players.find((p) => p.you)?.kills ?? 0} kills.
+            </p>
+            <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 800 }}>
+              +{results.rank.killsGained} career kills · {results.rank.kills} total
+            </p>
+            {results.rank.rankedUp && (
+              <p style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 800, color: "#ffc14a" }}>
+                RANK UP! Rank {results.rank.rank}
+              </p>
+            )}
+            <p style={{ margin: "0 0 16px", fontSize: 12, fontWeight: 700, color: "#d0d0d0" }}>
+              {results.rank.rank > 0 ? `Rank ${results.rank.rank}` : "Unranked"} · returning to lobby…
+            </p>
+            <button
+              type="button"
+              className="sa-leave-btn"
+              onClick={() => {
+                persistKills();
+                leaveRef.current?.();
+              }}
+            >
+              Return to Lobby
+            </button>
+          </div>
+        </div>
+      )}
+      {leaving && !results && (
         <div
           style={{
             position: "absolute",
@@ -273,4 +374,13 @@ export function Game({
       )}
     </div>
   );
+}
+
+function ordinal(n: number) {
+  const k = n % 10;
+  const t = n % 100;
+  if (k === 1 && t !== 11) return `${n}st`;
+  if (k === 2 && t !== 12) return `${n}nd`;
+  if (k === 3 && t !== 13) return `${n}rd`;
+  return `${n}th`;
 }

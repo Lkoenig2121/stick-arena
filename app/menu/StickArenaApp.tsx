@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Game } from "../game/Game";
 import { randomGuestName } from "../game/data/names";
-import type { ArenaRoom } from "./data";
+import { fillRoomPlayers, randomMap, type ArenaRoom } from "./data";
 import { LobbyScreen } from "./LobbyScreen";
+import { loadProgress, type Progress } from "./progress";
 import { TitleScreen } from "./TitleScreen";
 
 type Screen = "title" | "login" | "create" | "howto" | "lobby" | "play";
@@ -14,6 +15,16 @@ export function StickArenaApp() {
   const [name, setName] = useState("");
   const [draft, setDraft] = useState("");
   const [room, setRoom] = useState<ArenaRoom | null>(null);
+  const [progress, setProgress] = useState<Progress>({ kills: 0 });
+
+  useEffect(() => {
+    setProgress(loadProgress());
+  }, []);
+
+  const goLobby = () => {
+    setProgress(loadProgress());
+    setScreen("lobby");
+  };
 
   const enterLobby = (playerName: string) => {
     setName(playerName);
@@ -31,8 +42,8 @@ export function StickArenaApp() {
         key={room.id}
         playerName={name || randomGuestName()}
         place={room.map}
-        botNames={room.players.map((player) => player.name)}
-        onLeave={() => setScreen("lobby")}
+        botNames={room.players.filter((player) => player.name !== name).map((player) => player.name)}
+        onLeave={goLobby}
       />
     );
   }
@@ -41,6 +52,7 @@ export function StickArenaApp() {
     return (
       <LobbyScreen
         playerName={name}
+        progress={progress}
         onJoin={joinRoom}
         onLogout={() => {
           setName("");
@@ -85,6 +97,8 @@ export function StickArenaApp() {
             <li>Hold Shift for the scoreboard</li>
             <li>Esc asks to leave the match</li>
             <li>Most kills when the timer ends wins</li>
+            <li>When the round ends you return to the lobby and keep your career kills</li>
+            <li>Rank trophies unlock at 5, 20, 80, 300, 750, 2,000, 5,000, 10,000, and 20,000 kills</li>
           </ul>
           <button type="button" className="sa-btn" style={{ marginTop: 20 }} onClick={() => setScreen("title")}>
             Back
@@ -99,19 +113,15 @@ export function StickArenaApp() {
       onQuickStart={() => {
         const guest = randomGuestName();
         setName(guest);
+        const guestPlayer = { name: guest, color: "#9cff9c" };
         joinRoom({
           id: "quick",
           name: "Quick Start",
-          map: "The Lobby",
+          map: randomMap(),
           mode: "Deathmatch",
           maxPlayers: 6,
           timeLeft: "5:00",
-          players: [
-            { name: "Goodpeterson", color: "#8cff8c" },
-            { name: "TriggerClan", color: "#c9c9c9" },
-            { name: "Snarr", color: "#ffb36b" },
-            { name: "HOTT5", color: "#ffe56a" },
-          ],
+          players: fillRoomPlayers(guestPlayer, 6),
         });
       }}
       onLogin={() => {

@@ -3,14 +3,19 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   AI_LINES,
+  MAPS,
   ONLINE,
   OPENING_CHAT,
   ROOMS,
   SERVERS,
+  fillRoomPlayers,
+  randomMap,
   type ArenaRoom,
   type ChatLine,
   type LobbyPlayer,
 } from "./data";
+import { RankBadge } from "./RankBadge";
+import { loadProgress, rankInfo, type Progress } from "./progress";
 
 const SILVER = "#2a2a2a";
 const TEXT = "#f2f2f2";
@@ -89,15 +94,17 @@ const btnStyle: CSSProperties = {
 
 export function LobbyScreen({
   playerName,
+  progress: progressProp,
   onJoin,
   onLogout,
 }: {
   playerName: string;
+  progress?: Progress;
   onJoin: (room: ArenaRoom) => void;
   onLogout: () => void;
 }) {
   const [server, setServer] = useState(SERVERS[0]);
-  const [rooms, setRooms] = useState(ROOMS);
+  const [rooms, setRooms] = useState(() => ROOMS.map((room) => ({ ...room, map: randomMap() })));
   const [selectedId, setSelectedId] = useState(ROOMS[0].id);
   const [chatLines, setChatLines] = useState<ChatLine[]>(() =>
     OPENING_CHAT.map((line, i) => ({ ...line, id: i + 1 })),
@@ -106,13 +113,20 @@ export function LobbyScreen({
   const [creating, setCreating] = useState(false);
   const [privateCode, setPrivateCode] = useState<string | null>(null);
   const [createName, setCreateName] = useState("");
+  const [createMap, setCreateMap] = useState(MAPS[0]);
   const chatRef = useRef<HTMLDivElement>(null);
   const seq = useRef(OPENING_CHAT.length);
+  const [progress, setProgress] = useState<Progress>(progressProp ?? { kills: 0 });
+  const info = rankInfo(progress.kills);
 
   const selected = rooms.find((room) => room.id === selectedId) ?? rooms[0];
-  const you: LobbyPlayer = { name: playerName, color: "#c8c8c8" };
+  const you: LobbyPlayer = { name: playerName, color: "#9cff9c" };
   const inGame = [you, ...selected.players.filter((p) => p.name !== playerName)];
   const extras = ONLINE.filter((p) => !inGame.some((g) => g.name === p.name));
+
+  useEffect(() => {
+    setProgress(progressProp ?? loadProgress());
+  }, [progressProp]);
 
   useEffect(() => {
     chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight });
@@ -152,16 +166,25 @@ export function LobbyScreen({
     }, 700 + Math.random() * 900);
   };
 
+  const joinRoom = (room: ArenaRoom) => {
+    const others = room.players.filter((player) => player.name !== playerName);
+    const filled =
+      others.length >= 2
+        ? { ...room, players: [you, ...others].slice(0, room.maxPlayers) }
+        : { ...room, players: fillRoomPlayers(you, room.maxPlayers) };
+    onJoin(filled);
+  };
+
   const createRoom = () => {
     const name = createName.trim() || `${playerName}'s game`;
     const room: ArenaRoom = {
       id: `custom-${Date.now()}`,
       name,
-      map: "The Lobby",
+      map: createMap,
       mode: "Deathmatch",
       maxPlayers: 6,
       timeLeft: "5:00",
-      players: [you],
+      players: fillRoomPlayers(you, 6),
     };
     setRooms((current) => [room, ...current]);
     setSelectedId(room.id);
@@ -172,7 +195,27 @@ export function LobbyScreen({
 
   return (
     <div id="sa-lobby" style={rootStyle}>
-      <div className="sa-header">XGEN STUDIOS</div>
+      <div className="sa-header">
+        <span>XGEN STUDIOS</span>
+        <span className="sa-level">
+          <RankBadge rank={info.rank} size={14} />
+          {info.rank > 0 ? `RANK ${info.rank}` : "UNRANKED"}
+          <span className="sa-xp">
+            <span
+              className="sa-xp-fill"
+              style={{
+                width: `${
+                  info.nextKills
+                    ? Math.min(100, (progress.kills / info.nextKills) * 100)
+                    : 100
+                }%`,
+              }}
+            />
+          </span>
+          {progress.kills}
+          {info.nextKills ? `/${info.nextKills}` : ""} KILLS
+        </span>
+      </div>
       <div style={colsStyle}>
         <section style={{ display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0 }}>
           <div className="sa-panel" style={{ ...panel, flex: 1 }}>
@@ -243,14 +286,24 @@ export function LobbyScreen({
                 </div>
               ))}
               {inGame.map((player) => (
-                <div key={`in-${player.name}`} className="sa-bar" style={{ background: player.color }}>
+                <div
+                  key={`in-${player.name}`}
+                  className="sa-bar"
+                  style={{ background: player.color, display: "flex", alignItems: "center", gap: 6 }}
+                >
+                  {player.name === playerName && <RankBadge rank={info.rank} size={14} />}
                   {player.name}
                 </div>
               ))}
             </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 7, padding: "10px 8px 2px" }}>
-            <button type="button" className="sa-btn" style={btnStyle} onClick={() => onJoin(selected)}>
+            <button
+              type="button"
+              className="sa-btn"
+              style={btnStyle}
+              onClick={() => joinRoom(selected)}
+            >
               Join Game
             </button>
             <button type="button" className="sa-btn" style={btnStyle} onClick={() => setPrivateCode(privateCode === null ? "" : null)}>
@@ -275,6 +328,19 @@ export function LobbyScreen({
             onChange={(event) => setCreateName(event.target.value)}
             placeholder="Arena name"
           />
+          <label style={{ display: "block", fontSize: 12, fontWeight: 800, marginBottom: 6 }}>MAP</label>
+          <select
+            className="sa-select"
+            style={{ ...selectStyle, width: "100%", marginBottom: 12, textTransform: "none" }}
+            value={createMap}
+            onChange={(event) => setCreateMap(event.target.value)}
+          >
+            {MAPS.map((map) => (
+              <option key={map} value={map}>
+                {map}
+              </option>
+            ))}
+          </select>
           <button type="button" className="sa-btn" style={btnStyle} onClick={createRoom}>
             Create & Enter
           </button>
@@ -296,7 +362,7 @@ export function LobbyScreen({
             style={btnStyle}
             onClick={() => {
               const match = rooms.find((room) => room.name.toLowerCase() === privateCode.trim().toLowerCase());
-              if (match) onJoin(match);
+              if (match) joinRoom(match);
             }}
           >
             Join

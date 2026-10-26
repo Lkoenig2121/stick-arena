@@ -22,6 +22,44 @@ export type ChatLine = {
 
 export const SERVERS = ["Paperthin City", "Newgrounds", "XGen HQ", "Ballistick"];
 
+export const MAPS = [
+  "The Lobby",
+  "The Foundation",
+  "XGen HQ",
+  "Office Space",
+  "Sunnyvale Trailer Park",
+  "The Graveyard",
+  "Warehouse",
+  "Sewers",
+  "Desert Outpost",
+  "The Pit",
+];
+
+export const MODES = ["Deathmatch", "Random", "Team"];
+
+export function randomMap() {
+  return MAPS[Math.floor(Math.random() * MAPS.length)];
+}
+
+export function randomMode() {
+  return MODES[Math.floor(Math.random() * MODES.length)];
+}
+
+function shuffle<T>(list: T[]) {
+  const copy = [...list];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+export function fillRoomPlayers(host: LobbyPlayer, maxPlayers = 6): LobbyPlayer[] {
+  const pool = shuffle(ONLINE.filter((player) => player.name !== host.name));
+  const extras = Math.min(maxPlayers - 1, 3 + Math.floor(Math.random() * 3));
+  return [host, ...pool.slice(0, extras)];
+}
+
 export const ONLINE: LobbyPlayer[] = [
   { name: ".GEAR.FIRE.", color: "#9cff9c" },
   { name: "NYCOLIVER", color: "#8cffff" },
@@ -33,63 +71,45 @@ export const ONLINE: LobbyPlayer[] = [
   { name: "TriggerClan", color: "#e0e0e0" },
 ];
 
+function room(
+  id: string,
+  name: string,
+  maxPlayers: number,
+  timeLeft: string,
+  players: LobbyPlayer[],
+): ArenaRoom {
+  return {
+    id,
+    name,
+    map: randomMap(),
+    mode: randomMode(),
+    maxPlayers,
+    timeLeft,
+    players,
+  };
+}
+
 export const ROOMS: ArenaRoom[] = [
-  {
-    id: "lobby",
-    name: "The Lobby",
-    map: "The Lobby",
-    mode: "Deathmatch",
-    maxPlayers: 6,
-    timeLeft: "4:21",
-    players: [
-      { name: "Goodpeterson", color: "#9cff9c" },
-      { name: "TriggerClan", color: "#e0e0e0" },
-    ],
-  },
-  {
-    id: "foundation",
-    name: "quickstart-88",
-    map: "The Foundation",
-    mode: "Random",
-    maxPlayers: 4,
-    timeLeft: "4:52",
-    players: [{ name: ".GEAR.FIRE.", color: "#9cff9c" }],
-  },
-  {
-    id: "xgen",
-    name: "XGen Scrims",
-    map: "XGen HQ",
-    mode: "Deathmatch",
-    maxPlayers: 8,
-    timeLeft: "3:18",
-    players: [
-      { name: "Snarr", color: "#ffb86a" },
-      { name: "HOTT5", color: "#ffff6e" },
-      { name: "NYCOLIVER", color: "#8cffff" },
-      { name: "SOULJARBOY", color: "#b8e4ff" },
-    ],
-  },
-  {
-    id: "office",
-    name: "cubicle carnage",
-    map: "Office Space",
-    mode: "Deathmatch",
-    maxPlayers: 6,
-    timeLeft: "5:00",
-    players: [
-      { name: "$XIPRINCESS$", color: "#ffb8ff" },
-      { name: "StenkyClodfoot", color: "#ffd18a" },
-    ],
-  },
-  {
-    id: "sunnyvale",
-    name: "trailer park",
-    map: "Sunnyvale Trailer Park",
-    mode: "Team",
-    maxPlayers: 8,
-    timeLeft: "2:44",
-    players: [{ name: "Buckshot", color: "#ffa8a8" }],
-  },
+  room("open-1", "public mix", 6, "4:21", [
+    { name: "Goodpeterson", color: "#9cff9c" },
+    { name: "TriggerClan", color: "#e0e0e0" },
+  ]),
+  room("open-2", "quickstart-88", 4, "4:52", [{ name: ".GEAR.FIRE.", color: "#9cff9c" }]),
+  room("open-3", "XGen Scrims", 8, "3:18", [
+    { name: "Snarr", color: "#ffb86a" },
+    { name: "HOTT5", color: "#ffff6e" },
+    { name: "NYCOLIVER", color: "#8cffff" },
+    { name: "SOULJARBOY", color: "#b8e4ff" },
+  ]),
+  room("open-4", "cubicle carnage", 6, "5:00", [
+    { name: "$XIPRINCESS$", color: "#ffb8ff" },
+    { name: "StenkyClodfoot", color: "#ffd18a" },
+  ]),
+  room("open-5", "trailer park", 8, "2:44", [{ name: "Buckshot", color: "#ffa8a8" }]),
+  room("open-6", "graveyard run", 6, "4:05", [
+    { name: "NYCOLIVER", color: "#8cffff" },
+    { name: "Snarr", color: "#ffb86a" },
+  ]),
 ];
 
 export const OPENING_CHAT: Omit<ChatLine, "id">[] = [

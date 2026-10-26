@@ -78,6 +78,8 @@ export type Player = {
   spawnGuard: number;
   kills: number;
   deaths: number;
+  saRank: number;
+  lifetimeKills: number;
   walkPhase: number;
   attackFlash: number;
   targetId: string | null;
@@ -150,6 +152,7 @@ export type HudSnapshot = {
   fps: number;
   ping: number;
   scoreboard: boolean;
+  ended: boolean;
   players: {
     id: string;
     name: string;

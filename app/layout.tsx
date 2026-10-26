@@ -27,7 +27,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           dangerouslySetInnerHTML={{
             __html: `
 #sa-lobby{background:#2a2a2a!important;color:#f2f2f2!important;font-family:Verdana,Tahoma,Arial,sans-serif!important}
-#sa-lobby .sa-header{height:22px!important;display:flex!important;align-items:center!important;padding:0 2px!important;font-size:11px!important;font-weight:700!important;letter-spacing:.18em!important;color:#ffc14a!important}
+#sa-lobby .sa-header{height:22px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;padding:0 2px!important;font-size:11px!important;font-weight:700!important;letter-spacing:.18em!important;color:#ffc14a!important}
+#sa-lobby .sa-level{display:flex!important;align-items:center!important;gap:8px!important;letter-spacing:0!important;color:#ffc14a!important}
+#sa-lobby .sa-xp{display:inline-block!important;width:110px!important;height:8px!important;background:#1a1a1a!important;border:1px solid #f39c12!important;overflow:hidden!important}
+#sa-lobby .sa-xp-fill{display:block!important;height:100%!important;background:#ffc14a!important}
 #sa-lobby .sa-panel{background:#353535!important;border-top:2px solid #161616!important;border-left:2px solid #161616!important;border-right:2px solid #4a4a4a!important;border-bottom:2px solid #4a4a4a!important}
 #sa-lobby .sa-chat{flex:1!important;min-height:0!important;overflow:auto!important;padding:8px 10px!important;font-size:13px!important;font-weight:700!important;line-height:1.45!important;color:#f2f2f2!important}
 #sa-lobby .sa-nick{color:#ffc14a!important}

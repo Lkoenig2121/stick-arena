@@ -1,5 +1,6 @@
-import { FURNITURE, MAP_H, MAP_W, WALLS, FLOORS } from "../data/lobby";
+import { MAP_H, MAP_W, currentMap } from "../data/maps";
 import { WEAPONS } from "../data/weapons";
+import { RANK_TIERS } from "../../menu/progress";
 import type { Furniture, GroundWeapon, Player, Projectile, SlashFx, SlamFx, WeaponId } from "../types";
 
 export const PLAYER_RADIUS = 14;
@@ -73,7 +74,7 @@ export function drawMinimap(
   ctx.font = "800 11px Nunito, sans-serif";
   ctx.fillStyle = "rgba(0,0,0,0.65)";
   ctx.textAlign = "left";
-  ctx.fillText("THE LOBBY", x + 2, y + height + 16);
+  ctx.fillText(currentMap().name.toUpperCase(), x + 2, y + height + 16);
   ctx.restore();
 }
 
@@ -146,22 +147,23 @@ export function bakeMap() {
   canvas.height = MAP_H;
   const ctx = canvas.getContext("2d");
   if (!ctx) return canvas;
+  const map = currentMap();
 
   ctx.imageSmoothingEnabled = true;
 
-  for (const floor of FLOORS) {
+  for (const floor of map.floors) {
     ctx.fillStyle = floor.color;
     ctx.fillRect(floor.x, floor.y, floor.w, floor.h);
   }
 
   drawCarpetTexture(ctx);
 
-  for (const piece of FURNITURE) {
+  for (const piece of map.furniture) {
     drawFurniture(ctx, piece);
   }
 
-  for (const wall of WALLS) {
-    drawWall(ctx, wall.x, wall.y, wall.w, wall.h);
+  for (const wall of map.walls) {
+    drawWall(ctx, wall.x, wall.y, wall.w, wall.h, map.wallColor);
   }
 
   return canvas;
@@ -179,15 +181,22 @@ function drawCarpetTexture(ctx: CanvasRenderingContext2D) {
   ctx.restore();
 }
 
-function drawWall(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+function drawWall(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  color = "#efe8dc",
+) {
   const r = Math.min(18, w / 2, h / 2);
-  ctx.fillStyle = "#efe8dc";
+  ctx.fillStyle = color;
   roundRect(ctx, x, y, w, h, r);
   ctx.fill();
-  ctx.strokeStyle = "#d8cfc0";
+  ctx.strokeStyle = "rgba(0,0,0,0.18)";
   ctx.lineWidth = 3;
   ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  ctx.fillStyle = "rgba(255,255,255,0.28)";
   roundRect(ctx, x + 3, y + 3, Math.max(0, w - 6), Math.max(4, h * 0.18), r / 2);
   ctx.fill();
 }
@@ -425,12 +434,17 @@ export function drawPlayer(
 
   ctx.save();
   ctx.font = "700 16px Nunito, Comic Sans MS, sans-serif";
-  ctx.textAlign = "center";
+  ctx.textAlign = "left";
   ctx.lineWidth = 4;
   ctx.strokeStyle = "rgba(255,255,255,0.85)";
   ctx.fillStyle = "#111";
-  ctx.strokeText(player.name, x, y - 42);
-  ctx.fillText(player.name, x, y - 42);
+  const label = player.name;
+  const textW = ctx.measureText(label).width;
+  const badge = 20;
+  const startX = x - (textW + badge + 4) / 2;
+  drawRankTrophy(ctx, startX + 9, y - 50, player.saRank, 18);
+  ctx.strokeText(label, startX + badge + 4, y - 42);
+  ctx.fillText(label, startX + badge + 4, y - 42);
   ctx.restore();
 
   if (options.showHealth && !player.dead) {
@@ -451,6 +465,88 @@ export function drawPlayer(
     ctx.strokeRect(barX - 0.5, barY - 0.5, barW + 1, barH + 1);
     ctx.restore();
   }
+}
+
+export function drawRankTrophy(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  rank: number,
+  size: number,
+) {
+  const shown = Math.max(1, rank);
+  const fill = RANK_TIERS.find((tier) => tier.rank === shown)?.fill ?? "#e8c030";
+  const s = size / 16;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "#2a1c08";
+  ctx.lineWidth = 0.9;
+  ctx.fillStyle = fill;
+
+  if (shown >= 7) {
+    ctx.beginPath();
+    ctx.ellipse(0, 1.5, 9, 7.2, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(-6.2, -5.2);
+  ctx.lineTo(-4.4, 3.2);
+  ctx.quadraticCurveTo(0, 5.4, 4.4, 3.2);
+  ctx.lineTo(6.2, -5.2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.ellipse(0, -5.4, 6.2, 1.7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(-6.4, -2.6, 2.6, -0.55, Math.PI * 0.95);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(6.4, -2.6, 2.6, Math.PI * 0.05, Math.PI * 1.55, true);
+  ctx.stroke();
+
+  ctx.fillRect(-1.1, 3.4, 2.2, 3.4);
+  ctx.strokeRect(-1.1, 3.4, 2.2, 3.4);
+  ctx.fillRect(-3.4, 6.6, 6.8, 1.3);
+  ctx.strokeRect(-3.4, 6.6, 6.8, 1.3);
+  ctx.fillRect(-4.4, 7.9, 8.8, 1.7);
+  ctx.strokeRect(-4.4, 7.9, 8.8, 1.7);
+
+  if (shown >= 3) {
+    ctx.fillStyle = "#fff4b0";
+    ctx.beginPath();
+    ctx.moveTo(0, -8.8);
+    ctx.lineTo(0.85, -6.9);
+    ctx.lineTo(2.9, -6.9);
+    ctx.lineTo(1.2, -5.7);
+    ctx.lineTo(1.9, -3.8);
+    ctx.lineTo(0, -4.9);
+    ctx.lineTo(-1.9, -3.8);
+    ctx.lineTo(-1.2, -5.7);
+    ctx.lineTo(-2.9, -6.9);
+    ctx.lineTo(-0.85, -6.9);
+    ctx.closePath();
+    ctx.fill();
+  }
+  if (shown >= 9) {
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.moveTo(-3.6, -8.2);
+    ctx.lineTo(0, -11.2);
+    ctx.lineTo(3.6, -8.2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function isSword(weapon: WeaponId): weapon is "katana" | "lasersword" {

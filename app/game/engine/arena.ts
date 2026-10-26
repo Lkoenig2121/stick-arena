@@ -1,12 +1,5 @@
 import { BOT_NAMES, randomGuestName } from "../data/names";
-import {
-  MAP_H,
-  MAP_W,
-  PLACE_NAME,
-  SOLIDS,
-  SPAWNS,
-  WEAPON_SPAWNS,
-} from "../data/lobby";
+import { MAP_H, MAP_W, PLACE_NAME, currentMap, setActiveMap } from "../data/maps";
 import { MAX_HEALTH, WEAPONS } from "../data/weapons";
 import type {
   BloodSplat,
@@ -20,6 +13,7 @@ import type {
   SlamFx,
   WeaponId,
 } from "../types";
+import { botRank, rankFromKills, saveProgress } from "../../menu/progress";
 import { PLAYER_RADIUS } from "./draw";
 import { findPath, followPath, lineClear, steerAround } from "./nav";
 
@@ -41,6 +35,7 @@ export class Arena {
   time = 0;
   timeLeft = ROUND_TIME;
   scoreboard = false;
+  ended = false;
   attacking = false;
   keys = new Set<string>();
   mouse = { x: MAP_W / 2, y: MAP_H / 2 };
@@ -50,11 +45,14 @@ export class Arena {
   place: string;
   playerName: string;
   botNames: string[];
+  lifetimeKills: number;
 
-  constructor(opts?: { playerName?: string; place?: string; botNames?: string[] }) {
+  constructor(opts?: { playerName?: string; place?: string; botNames?: string[]; lifetimeKills?: number }) {
     this.place = opts?.place ?? PLACE_NAME;
     this.playerName = opts?.playerName ?? "";
     this.botNames = opts?.botNames?.length ? opts.botNames : BOT_NAMES.slice(0, 4);
+    this.lifetimeKills = opts?.lifetimeKills ?? 0;
+    setActiveMap(this.place);
     this.reset(true);
   }
 
@@ -70,16 +68,20 @@ export class Arena {
     this.feed = [];
     this.time = 0;
     this.timeLeft = ROUND_TIME;
+    this.ended = false;
 
     this.players.push(this.makePlayer(this.youId, youName, "#111111", false, 0));
-    const bots = this.botNames.slice(0, 4);
+    const bots = this.botNames
+      .filter((name) => name !== youName)
+      .slice(0, 5);
     bots.forEach((name, i) => {
       this.players.push(
         this.makePlayer(`bot-${i}`, name, BOT_COLORS[i % BOT_COLORS.length], true, i + 1),
       );
     });
 
-    this.weapons = WEAPON_SPAWNS.map((spawn, i) => ({
+    const map = currentMap();
+    this.weapons = map.weapons.map((spawn, i) => ({
       id: `w-${i}`,
       weapon: spawn.weapon,
       x: spawn.x,
@@ -93,7 +95,7 @@ export class Arena {
   }
 
   makePlayer(id: string, name: string, color: string, isBot: boolean, spawnIndex: number): Player {
-    const spawn = openSpot(SPAWNS[spawnIndex % SPAWNS.length]);
+    const spawn = openSpot(currentMap().spawns[spawnIndex % currentMap().spawns.length]);
     return {
       id,
       name,
@@ -113,6 +115,8 @@ export class Arena {
       spawnGuard: 2,
       kills: 0,
       deaths: 0,
+      lifetimeKills: isBot ? 0 : this.lifetimeKills,
+      saRank: isBot ? botRank(name) : rankFromKills(this.lifetimeKills),
       walkPhase: 0,
       attackFlash: 0,
       targetId: null,
@@ -130,10 +134,13 @@ export class Arena {
   }
 
   update(dt: number) {
+    if (this.ended) return;
+
     this.time += dt;
     this.timeLeft = Math.max(0, this.timeLeft - dt);
     if (this.timeLeft <= 0) {
-      this.reset();
+      this.ended = true;
+      this.scoreboard = true;
       return;
     }
 
@@ -335,7 +342,7 @@ export class Arena {
   unstuck(player: Player) {
     for (let pass = 0; pass < 6; pass++) {
       let moved = false;
-      for (const solid of SOLIDS) {
+      for (const solid of currentMap().solids) {
         const pushed = separateCircleRect(player.x, player.y, PLAYER_RADIUS, solid);
         if (!pushed) continue;
         player.x = clamp(pushed.x, 24, MAP_W - 24);
@@ -519,6 +526,11 @@ export class Arena {
       target.deathTimer = RESPAWN;
       target.deaths += 1;
       attacker.kills += 1;
+      if (!attacker.isBot) {
+        const career = attacker.lifetimeKills + attacker.kills;
+        attacker.saRank = rankFromKills(career);
+        saveProgress({ kills: career });
+      }
       target.weapon = "fists";
       const def = WEAPONS[attacker.weapon];
       const flavor = def.killFlavor ? `, ${def.killFlavor}` : "";
@@ -532,7 +544,8 @@ export class Arena {
   }
 
   respawn(player: Player) {
-    const spot = openSpot(SPAWNS[Math.floor(Math.random() * SPAWNS.length)]);
+    const spawns = currentMap().spawns;
+    const spot = openSpot(spawns[Math.floor(Math.random() * spawns.length)]);
     player.x = spot.x;
     player.y = spot.y;
     player.health = MAX_HEALTH;
@@ -555,7 +568,8 @@ export class Arena {
       timeLeft: this.timeLeft,
       fps,
       ping: this.ping,
-      scoreboard: this.scoreboard,
+      scoreboard: this.scoreboard || this.ended,
+      ended: this.ended,
       players: ranked.map((p) => ({
         id: p.id,
         name: p.name,
@@ -582,7 +596,7 @@ function angleDiff(a: number, b: number) {
 }
 
 function collides(x: number, y: number, r: number) {
-  return SOLIDS.some((s) => circleRect(x, y, r, s));
+  return currentMap().solids.some((s) => circleRect(x, y, r, s));
 }
 
 function circleRect(cx: number, cy: number, r: number, rect: Rect) {

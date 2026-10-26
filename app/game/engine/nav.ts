@@ -1,4 +1,4 @@
-import { MAP_H, MAP_W, SOLIDS } from "../data/lobby";
+import { MAP_H, MAP_W, currentMap } from "../data/maps";
 import type { Rect } from "../types";
 import { PLAYER_RADIUS } from "./draw";
 
@@ -11,6 +11,7 @@ const cols = Math.ceil(MAP_W / CELL);
 const rows = Math.ceil(MAP_H / CELL);
 const walk = new Uint8Array(cols * rows);
 let ready = false;
+let bakedFor = "";
 
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
@@ -24,7 +25,7 @@ function circleRect(cx: number, cy: number, r: number, rect: Rect) {
 
 export function blocked(x: number, y: number, r = CLEAR_R) {
   if (x < 24 || y < 24 || x > MAP_W - 24 || y > MAP_H - 24) return true;
-  return SOLIDS.some((solid) => circleRect(x, y, r, solid));
+  return currentMap().solids.some((solid) => circleRect(x, y, r, solid));
 }
 
 export function lineClear(ax: number, ay: number, bx: number, by: number, r = CLEAR_R) {
@@ -37,7 +38,8 @@ export function lineClear(ax: number, ay: number, bx: number, by: number, r = CL
 }
 
 function build() {
-  if (ready) return;
+  const name = currentMap().name;
+  if (ready && bakedFor === name) return;
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
       const wx = x * CELL + CELL / 2;
@@ -45,6 +47,7 @@ function build() {
       walk[y * cols + x] = blocked(wx, wy) ? 0 : 1;
     }
   }
+  bakedFor = name;
   ready = true;
 }
 
